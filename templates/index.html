@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Wi-Fi Share</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Share files wirelessly between devices on the same network">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <div class="container">
+
+        <!-- HEADER -->
+        <header class="header">
+            <h1>📡 Wi-Fi Share</h1>
+            <p>Share files wirelessly between your devices</p>
+            <div class="server-info">
+                <span class="dot"></span>
+                <span>Server running at</span>
+                <code>http://{{ ip }}:{{ port }}</code>
+            </div>
+        </header>
+
+        <!-- TOP GRID: QR & STATS -->
+        <div class="grid-2">
+            <!-- QR CODE -->
+            <div class="card">
+                <h2>📱 Quick Connect</h2>
+                <div class="qr-section">
+                    {% if qr_code %}
+                    <div class="qr-code">
+                        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+                    </div>
+                    <p class="qr-label">Scan with your phone camera</p>
+                    {% else %}
+                    <p class="qr-label">Install <code>qrcode</code> package for QR
+                        code:<br><code>pip install qrcode[pil]</code></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- STORAGE STATS -->
+            <div class="card">
+                <h2>📊 Storage Stats</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.total_files }}</div>
+                        <div class="stat-label">Files</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">{{ stats.total_size }}</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    {% for cat, data in stats.categories.items() %}
+                    <div class="stat-item">
+                        <div class="stat-value">{{ data.count }}</div>
+                        <div class="stat-label">{{ cat }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- UPLOAD SECTION -->
+        <div class="card">
+            <h2>📤 Upload Files</h2>
+
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-zone-icon">☁️</span>
+                <p class="drop-zone-text">
+                    <strong>Drag & drop</strong> files here or
+                </p>
+                <label class="browse-btn" for="fileInput">Browse Files</label>
+                <input type="file" id="fileInput" multiple>
+
+                <div class="selected-files" id="selectedFiles"></div>
+            </div>
+
+            <button class="upload-btn" id="uploadBtn" onclick="uploadFiles()">
+                <span>📤</span> Upload Files
+            </button>
+
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressPercent">0%</span>
+                    <span id="progressSpeed">-</span>
+                    <span id="progressEta">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILES SECTION -->
+        <div class="card">
+            <h2>📁 Files ({{ files|length }})</h2>
+
+            <div class="files-header">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search files..." oninput="filterFiles()">
+                </div>
+
+                <div class="filter-btns">
+                    <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">All</button>
+                    <button class="filter-btn" data-filter="image" onclick="setFilter('image', this)">🖼️</button>
+                    <button class="filter-btn" data-filter="video" onclick="setFilter('video', this)">🎬</button>
+                    <button class="filter-btn" data-filter="audio" onclick="setFilter('audio', this)">🎵</button>
+                    <button class="filter-btn" data-filter="document" onclick="setFilter('document', this)">📄</button>
+                </div>
+
+                <select class="sort-select" id="sortSelect" onchange="sortFiles()">
+                    <option value="date-desc">Newest First</option>
+                    <option value="date-asc">Oldest First</option>
+                    <option value="name-asc">Name A-Z</option>
+                    <option value="name-desc">Name Z-A</option>
+                    <option value="size-desc">Largest First</option>
+                    <option value="size-asc">Smallest First</option>
+                </select>
+            </div>
+
+            <div class="file-list" id="fileList">
+                {% if files %}
+                {% for f in files %}
+                <div class="file-item" data-name="{{ f.name }}" data-category="{{ f.category }}"
+                    data-size="{{ f.size_bytes }}" data-mtime="{{ f.mtime_ts }}">
+                    <span class="file-icon">{{ f.icon }}</span>
+                    <div class="file-info">
+                        <div class="file-name">{{ f.name }}</div>
+                        <div class="file-meta">
+                            <span>{{ f.size }}</span>
+                            <span>{{ f.mtime }}</span>
+                        </div>
+                    </div>
+                    <div class="file-actions">
+                        {% if f.previewable %}
+                        <button class="action-btn preview" onclick="previewFile('{{ f.name }}', '{{ f.category }}')"
+                            title="Preview">
+                            👁️ <span>Preview</span>
+                        </button>
+                        {% endif %}
+                        <a class="action-btn download" href="/download/{{ f.name }}" title="Download">
+                            ⬇️ <span>Download</span>
+                        </a>
+                        <button class="action-btn copy" onclick="copyLink('{{ f.name }}')" title="Copy Link">
+                            📋
+                        </button>
+                        <button class="action-btn delete" onclick="deleteFile('{{ f.name }}')" title="Delete">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="no-files">
+                    <span class="no-files-icon">📭</span>
+                    <p>No files shared yet. Upload some files to get started!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div class="modal" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="previewTitle"></span>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="previewBody"></div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+</body>
+
+</html>
