@@ -1,8 +1,10 @@
 # Flask routes for the Wi-Fi File Share application
 import os
 import mimetypes
+import io
+import zipfile
 
-from flask import Blueprint, request, render_template, send_from_directory, abort, jsonify
+from flask import Blueprint, request, render_template, send_from_directory, send_file, abort, jsonify
 
 from app.config import SHARED_FOLDER, PORT
 from app.utils import (
@@ -52,6 +54,50 @@ def download(filename):
     if not os.path.exists(full_path):
         abort(404)
     return send_from_directory(SHARED_FOLDER, filename, as_attachment=True)
+
+
+@main.route("/download-zip", methods=["POST"])
+def download_zip():
+    """Package selected files into one download for mobile browsers."""
+    data = request.get_json(silent=True) or {}
+    filenames = data.get("files", [])
+    if not isinstance(filenames, list) or not filenames:
+        return jsonify({"success": False, "error": "Select at least one file"}), 400
+
+    shared_root = os.path.realpath(SHARED_FOLDER)
+    files_to_zip = []
+    for filename in filenames:
+        if not isinstance(filename, str) or not filename.strip():
+            continue
+        full_path = os.path.realpath(os.path.join(SHARED_FOLDER, filename))
+        if os.path.commonpath([shared_root, full_path]) != shared_root:
+            continue
+        if os.path.isfile(full_path):
+            files_to_zip.append((full_path, os.path.basename(full_path)))
+
+    if not files_to_zip:
+        return jsonify({"success": False, "error": "No selected files were found"}), 404
+
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        used_names = set()
+        for full_path, filename in files_to_zip:
+            archive_name = filename
+            suffix = 2
+            stem, extension = os.path.splitext(filename)
+            while archive_name in used_names:
+                archive_name = f"{stem} ({suffix}){extension}"
+                suffix += 1
+            used_names.add(archive_name)
+            zip_file.write(full_path, archive_name)
+    archive.seek(0)
+
+    return send_file(
+        archive,
+        mimetype="application/zip",
+        as_attachment=True,
+        download_name="wifi-share-files.zip"
+    )
 
 
 @main.route("/stream/<path:filename>")

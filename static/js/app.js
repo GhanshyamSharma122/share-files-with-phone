@@ -190,6 +190,64 @@ function sortFiles() {
     items.forEach(item => fileList.appendChild(item));
 }
 
+function getSelectedFiles() {
+    return Array.from(document.querySelectorAll('.file-checkbox:checked'))
+        .map(checkbox => checkbox.value);
+}
+
+function updateSelectedCount() {
+    const count = getSelectedFiles().length;
+    document.getElementById('selectedCount').textContent = count;
+}
+
+function toggleAllFiles() {
+    const checkboxes = Array.from(document.querySelectorAll('.file-checkbox'));
+    const shouldSelect = checkboxes.some(checkbox => !checkbox.checked);
+    checkboxes.forEach(checkbox => { checkbox.checked = shouldSelect; });
+    updateSelectedCount();
+}
+
+async function downloadSelected() {
+    const files = getSelectedFiles();
+    if (files.length === 0) {
+        showToast('Select at least one file to download', 'warning');
+        return;
+    }
+
+    const button = document.querySelector('.download-all');
+    button.disabled = true;
+    button.textContent = '⏳ Preparing ZIP...';
+
+    try {
+        const response = await fetch('/download-zip', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files })
+        });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || 'Could not prepare the download');
+        }
+
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'wifi-share-files.zip';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast(`Downloading ${files.length} file(s) as one ZIP`, 'success');
+    } catch (error) {
+        showToast(error.message || 'Download failed', 'error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = '⬇️ Download selected (<span id="selectedCount">0</span>)';
+        updateSelectedCount();
+    }
+}
+
 // ========== FILE ACTIONS ==========
 function copyLink(filename) {
     const url = window.location.origin + '/download/' + encodeURIComponent(filename);

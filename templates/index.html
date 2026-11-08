@@ -120,6 +120,13 @@
                     <option value="size-desc">Largest First</option>
                     <option value="size-asc">Smallest First</option>
                 </select>
+
+                <div class="bulk-actions">
+                    <button class="bulk-btn" type="button" onclick="toggleAllFiles()">☑️ Select all</button>
+                    <button class="bulk-btn download-all" type="button" onclick="downloadSelected()">
+                        ⬇️ Download selected (<span id="selectedCount">0</span>)
+                    </button>
+                </div>
             </div>
 
             <div class="file-list" id="fileList">
@@ -127,6 +134,9 @@
                 {% for f in files %}
                 <div class="file-item" data-name="{{ f.name }}" data-category="{{ f.category }}"
                     data-size="{{ f.size_bytes }}" data-mtime="{{ f.mtime_ts }}">
+                    <label class="file-select" title="Select {{ f.name }}">
+                        <input type="checkbox" class="file-checkbox" value="{{ f.name }}" onchange="updateSelectedCount()">
+                    </label>
                     <span class="file-icon">{{ f.icon }}</span>
                     <div class="file-info">
                         <div class="file-name">{{ f.name }}</div>

@@ -418,6 +418,31 @@ body {
 
 .sort-select:focus { outline: none; border-color: var(--accent-primary); }
 
+.bulk-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bulk-btn {
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.bulk-btn:hover { border-color: var(--accent-primary); }
+
+.bulk-btn.download-all {
+    background: var(--gradient-primary);
+    border-color: transparent;
+}
+
+.bulk-btn:disabled { opacity: 0.65; cursor: wait; }
+
 /* ========== FILE LIST ========== */
 .file-list {
     display: flex;
@@ -447,6 +472,19 @@ body {
     background: rgba(255, 255, 255, 0.06);
     border-color: var(--border-color);
     transform: translateX(4px);
+}
+
+.file-select {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.file-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
 }
 
 .file-icon {
@@ -676,4 +714,6 @@ body {
     .search-box { width: 100%; }
     .filter-btns { width: 100%; justify-content: center; }
     .stat-value { font-size: 1.2rem; }
+    .bulk-actions { width: 100%; }
+    .bulk-btn { flex: 1; }
 }
